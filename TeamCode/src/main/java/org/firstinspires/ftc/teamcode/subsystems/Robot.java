@@ -17,14 +17,14 @@ public class Robot {
         TeleOp
     }
 
-    AirplaneLauncher airplaneLauncher;
-    Arm arm;
-    Deposit deposit;
-    Drivetrain drivetrain;
-    MecanumDrive mecanumDrive;
-    HangingSubsystem hangingSubsystem;
-    Intake intake;
-    Lift lift;
+    public AirplaneLauncher airplaneLauncher;
+    public Arm arm;
+    public Deposit deposit;
+    public Drivetrain drivetrain;
+    public MecanumDrive mecanumDrive;
+    public HangingSubsystem hangingSubsystem;
+    public Intake intake;
+    public Lift lift;
 
 
     public Robot(HardwareMap hardwareMap, OpModeType opModeType) {
@@ -33,6 +33,8 @@ public class Robot {
         arm = new Arm(hardwareMap, lift::getPosition);
         deposit = new Deposit(hardwareMap);
         intake = new Intake(hardwareMap);
+        airplaneLauncher = new AirplaneLauncher(hardwareMap);
+        hangingSubsystem = new HangingSubsystem(hardwareMap);
 
         lift.resetEncoder();
 
@@ -41,8 +43,6 @@ public class Robot {
             mecanumDrive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
         } else {
             drivetrain = new Drivetrain(hardwareMap);
-            airplaneLauncher = new AirplaneLauncher(hardwareMap);
-            hangingSubsystem = new HangingSubsystem(hardwareMap);
         }
     }
 

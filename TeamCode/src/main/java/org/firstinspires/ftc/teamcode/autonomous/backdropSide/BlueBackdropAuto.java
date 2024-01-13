@@ -20,7 +20,6 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.commands.Intake.OuttakeAutoCommand;
 import org.firstinspires.ftc.teamcode.commands.LowExtendCommand;
 import org.firstinspires.ftc.teamcode.commands.RetractCommand;
-import org.firstinspires.ftc.teamcode.commands.lift.AutoControlCommand;
 import org.firstinspires.ftc.teamcode.movement.MecanumDrive;
 import org.firstinspires.ftc.teamcode.subsystems.Arm;
 import org.firstinspires.ftc.teamcode.subsystems.Deposit;
@@ -57,9 +56,6 @@ public class BlueBackdropAuto extends LinearOpMode {
         Deposit deposit = new Deposit(hardwareMap);
 
         lift.resetEncoder();
-
-        AutoControlCommand autoControlCommand = new AutoControlCommand(lift);
-        lift.setDefaultCommand(autoControlCommand);
 
         RetractCommand retractCommand = new RetractCommand(lift, arm);
 

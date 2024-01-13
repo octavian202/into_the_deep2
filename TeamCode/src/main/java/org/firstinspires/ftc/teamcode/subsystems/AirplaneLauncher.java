@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.ServoImplEx;
 
 public class AirplaneLauncher extends SubsystemBase {
 
-    public static double UP = 0.36, DOWN = 0.42;
+    public static double UP = 0.45, DOWN = 0.41;
 
     private ServoImplEx servo;
 

@@ -35,69 +35,17 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 import java.util.List;
 
 @Autonomous(name = "auto test", group = ".")
-public class AutoTest extends LinearOpMode {
+public class AutoTest extends AutoBase {
     @Override
-    public void runOpMode() throws InterruptedException {
-
-        CommandScheduler.getInstance().reset();
-
-        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
-        for (LynxModule hub : allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
-        }
-
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
-
-        Pose2d startPose = new Pose2d(0, 0, 0);
-
-        MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, startPose);
-        Lift lift = new Lift(hardwareMap);
-        Arm arm = new Arm(hardwareMap, lift::getPosition);
-        Intake intake = new Intake(hardwareMap);
-        Deposit deposit = new Deposit(hardwareMap);
-
-        lift.resetEncoder();
-
-
-        RetractCommand retractCommand = new RetractCommand(lift, arm);
-
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        WebcamName webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
-        OpenCvCamera camera = OpenCvCameraFactory.getInstance().createWebcam(webcamName, cameraMonitorViewId);
-
-        OpenCvCamera.AsyncCameraOpenListener cameraOpenListener = new OpenCvCamera.AsyncCameraOpenListener() {
-            @Override
-            public void onOpened() {
-                camera.startStreaming(1280, 720, OpenCvCameraRotation.UPRIGHT);
-            }
-
-            @Override
-            public void onError(int errorCode) {
-
-            }
-        };
-
-        camera.openCameraDeviceAsync(cameraOpenListener);
-        ThresholdPipeline pipeline = new ThresholdPipeline(telemetry, "blue");
-        camera.setPipeline(pipeline);
-
-        int spikePosition = 3;
-
-        while (!isStopRequested() && !isStarted()) {
-            spikePosition = pipeline.getPosition();
-        }
-
-
-        waitForStart();
-
+    public void onStarted() {
         Pose2d spikePos = StackSidePositions.blueSpikePos[spikePosition - 1];
         Pose2d backdropPos = StackSidePositions.blueBackdropPos[spikePosition - 1];
 
-        Action driveAction = mecanumDrive.actionBuilder(startPose)
+        Action driveAction = robot.mecanumDrive.actionBuilder(new Pose2d(0, 0, 0))
                 // merge la spike
                 .splineToLinearHeading(spikePos, spikePos.heading)
                 .afterTime(0, () -> { // pune pixelul
-                    OuttakeAutoCommand outtakeAutoCommand = new OuttakeAutoCommand(intake);
+                    OuttakeAutoCommand outtakeAutoCommand = new OuttakeAutoCommand(robot.intake);
                     outtakeAutoCommand.schedule();
                 })
                 .waitSeconds(1.6) // iese pixelul
@@ -105,7 +53,7 @@ public class AutoTest extends LinearOpMode {
                 .waitSeconds(0.5)
                 .lineToY(56)
                 .waitSeconds(1)
-                .afterTime(0, () -> {(new LowExtendCommand(lift, arm, 1300)).schedule();})
+                .afterTime(0, () -> {(new LowExtendCommand(robot.lift, robot.arm, 1300)).schedule();})
                 .setReversed(true)
                 .splineToLinearHeading(backdropPos, Math.toRadians(-90), new VelConstraint() {
                     @Override
@@ -113,19 +61,12 @@ public class AutoTest extends LinearOpMode {
                         return 20;
                     }
                 })
-                .afterTime(0.4, deposit::deposit)
+                .afterTime(0.4, robot.deposit::deposit)
                 .waitSeconds(1.4)
-                .afterTime(0, deposit::stop)
+                .afterTime(0, robot.deposit::stop)
                 .afterTime(0, () -> retractCommand.schedule())
                 .setReversed(false)
                 .splineToLinearHeading(StackSidePositions.blueParkPos, Math.toRadians(-45))
                 .build();
-
-        while (opModeIsActive() && !isStopRequested()) {
-            CommandScheduler.getInstance().run();
-
-            driveAction.run(new TelemetryPacket());
-        }
-
     }
 }
