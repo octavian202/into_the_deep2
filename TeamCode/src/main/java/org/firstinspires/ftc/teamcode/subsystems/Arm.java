@@ -10,15 +10,18 @@ import java.util.function.Supplier;
 @Config
 public class Arm extends SubsystemBase {
 
-    public static double INTAKE = 0.05, DEPOSIT = 0.5, IDLE = 0.02;
-    public static double WRIST_INTAKE = 0.44, WRIST_DEPOSIT = 0.48;
+    public enum ArmState {
+        Intake, Idle, Low, Mid, High
+    }
+
+    private ArmState armState;
+    public static double IDLE = 0.02;
+    public static double INTAKE = 0.05, DEPOSIT_LOW = 0.45, DEPOSIT_MID = 0.5, DEPOSIT_HIGH = 0.69;
+    public static double WRIST_INTAKE = 0.44, WRIST_DEPOSIT_MID = 0.48, WRIST_DEPOSIT_LOW = 0.3, WRIST_DEPOSIT_HIGH = 0.66;
     public static int CHANGE_HEIGHT = 150;
-
-
 
     ServoImplEx left, right;
     Supplier<Integer> liftPositionSupplier;
-
     ServoImplEx wrist;
 
     public Arm(HardwareMap hardwareMap, Supplier<Integer> lpos) {
@@ -33,8 +36,7 @@ public class Arm extends SubsystemBase {
         wrist = hardwareMap.get(ServoImplEx.class, "wrist");
         wrist.setPosition(WRIST_INTAKE);
 
-        isUp = false;
-        low = false;
+        armState = ArmState.Intake;
     }
 
     public void setPosition(double position) {
@@ -42,24 +44,20 @@ public class Arm extends SubsystemBase {
         right.setPosition((1.0 - position));
     }
 
-    public boolean isUp = false;
-    public boolean low = false;
-    public void toggle() {
-        isUp = !isUp;
+    public void goIntake() {
+        armState = ArmState.Intake;
     }
 
-    public void goDown() {
-        isUp = false;
-        low = false;
+    public void goLow() {
+        armState = ArmState.Low;
     }
-    public void goUp() {
-        low = false;
-        isUp = true;
+
+    public void goMid() {
+        armState = ArmState.Mid;
     }
-    public boolean getIsUp() {return isUp;}
-    public void goLow(){
-        goUp();
-        low = true;
+
+    public void goHigh() {
+        armState = ArmState.High;
     }
 
     @Override
@@ -67,22 +65,39 @@ public class Arm extends SubsystemBase {
 
         int liftPosition = liftPositionSupplier.get();
 
-        if (isUp) {
-            if (low) {
-                this.setPosition(0.25);
-                wrist.setPosition(0.3);
-            } else {
-                this.setPosition(DEPOSIT);
-                wrist.setPosition(WRIST_DEPOSIT);
-            }
-        } else {
-            wrist.setPosition(WRIST_INTAKE);
+        if (armState == ArmState.Intake && liftPosition > CHANGE_HEIGHT) {
+            armState = ArmState.Idle;
+        }
+        if (armState == ArmState.Idle && liftPosition <= CHANGE_HEIGHT) {
+            armState = ArmState.Intake;
+        }
 
-            if (liftPosition <= CHANGE_HEIGHT) {
+        switch (armState) {
+            case Intake:
                 this.setPosition(INTAKE);
-            } else {
+                wrist.setPosition(WRIST_INTAKE);
+                break;
+
+            case Idle:
                 this.setPosition(IDLE);
-            }
+                wrist.setPosition(WRIST_INTAKE);
+                break;
+
+            case Low:
+                this.setPosition(DEPOSIT_LOW);
+                wrist.setPosition(WRIST_DEPOSIT_LOW);
+                break;
+
+            case Mid:
+                this.setPosition(DEPOSIT_MID);
+                wrist.setPosition(WRIST_DEPOSIT_MID);
+                break;
+
+            case High:
+                this.setPosition(DEPOSIT_HIGH);
+                wrist.setPosition(WRIST_DEPOSIT_HIGH);
+                break;
+
         }
     }
 

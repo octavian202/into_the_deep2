@@ -21,9 +21,9 @@ public class Intake extends SubsystemBase {
     }
 
 
-    public static double UP = 0.28, DOWN = 0.61;
+    public static double UP = 0d, DOWN = 0.37;
     public static double INTAKE_POWER = 0.8, EJECT_POWER = -0.6;
-    public static double AMPS_THRESHOLD = 2.5;
+    public static double AMPS_THRESHOLD = 100d;
     public static double CHECK_INTERVAL = 0.6;
 
     DcMotorEx motor;
@@ -53,6 +53,7 @@ public class Intake extends SubsystemBase {
     public void reverseMotor() {
         motor.setPower(EJECT_POWER);
     }
+    public void reverseMotorMax() {motor.setPower(-1d);}
 
     public void goUp() {
         servo.setPosition(UP);

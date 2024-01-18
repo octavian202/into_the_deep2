@@ -14,7 +14,7 @@ public class RetractCommand extends SequentialCommandGroup {
 
     public RetractCommand(Lift lift, Arm arm) {
         addCommands(
-                new InstantCommand(arm::goDown, arm),
+                new InstantCommand(arm::goIntake, arm),
                 new WaitCommand(WAIT_MS),
                 new InstantCommand(() -> lift.setTarget(0), lift)
         );

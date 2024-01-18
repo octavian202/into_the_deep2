@@ -26,7 +26,7 @@ public class LiftPID extends LinearOpMode {
         lift.setDefaultCommand(autoControlCommand);
 
         Arm arm = new Arm(hardwareMap, lift::getPosition);
-        arm.goDown();
+        arm.goIntake();
 
         waitForStart();
 
