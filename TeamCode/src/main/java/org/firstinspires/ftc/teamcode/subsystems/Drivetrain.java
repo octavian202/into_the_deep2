@@ -12,7 +12,7 @@ public class Drivetrain extends SubsystemBase {
 
     public MotorEx frontLeft, frontRight, backRight, backLeft;
     MecanumDrive mecanumDrive;
-    BasicIMU imu;
+//    BasicIMU imu;
 
     public Drivetrain(HardwareMap hardwareMap) {
         frontLeft = new MotorEx(hardwareMap, "lf", Motor.GoBILDA.RPM_435);
@@ -41,17 +41,17 @@ public class Drivetrain extends SubsystemBase {
                 backLeft,
                 backRight
         );
-        imu = new BasicIMU(hardwareMap);
-        resetIMU();
+//        imu = new BasicIMU(hardwareMap);
+//        resetIMU();
     }
 
-    public double getHeading() {
-        return imu.getHeading();
-    }
+//    public double getHeading() {
+//        return imu.getHeading();
+//    }
 
-    public void resetIMU() {
-        imu.reset();
-    }
+//    public void resetIMU() {
+//        imu.reset();
+//    }
 
     public void driveRobotCentric(double x, double y, double rx, double coef) {
         x = x * coef;
@@ -61,13 +61,13 @@ public class Drivetrain extends SubsystemBase {
         mecanumDrive.driveRobotCentric(x, y, rx, false);
     }
 
-    public void driveFieldCentric(double x, double y, double rx, double coef) {
-        x = x * coef;
-        y = y * coef;
-        rx = rx * coef;
-
-        mecanumDrive.driveFieldCentric(x, y, rx, imu.getRotation2d().getDegrees(), false);
-    }
+//    public void driveFieldCentric(double x, double y, double rx, double coef) {
+//        x = x * coef;
+//        y = y * coef;
+//        rx = rx * coef;
+//
+//        mecanumDrive.driveFieldCentric(x, y, rx, imu.getRotation2d().getDegrees(), false);
+//    }
 
 
 }

@@ -5,6 +5,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.SubsystemBase;
+import com.arcrobotics.ftclib.command.button.Trigger;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.qualcomm.hardware.lynx.LynxModule;
@@ -13,10 +14,12 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.commands.Intake.EjectIntake;
 import org.firstinspires.ftc.teamcode.commands.Intake.StartIntake;
+import org.firstinspires.ftc.teamcode.commands.Intake.StartIntakeForStack;
 import org.firstinspires.ftc.teamcode.commands.Intake.StopIntake;
 import org.firstinspires.ftc.teamcode.commands.drivetrain.DriveRobotCentricCommand;
 import org.firstinspires.ftc.teamcode.commands.hanging.HangingControl;
 import org.firstinspires.ftc.teamcode.commands.lift.ManualControlCommand;
+import org.firstinspires.ftc.teamcode.subsystems.Arm;
 import org.firstinspires.ftc.teamcode.subsystems.Robot;
 import org.firstinspires.ftc.teamcode.utils.Map;
 
@@ -50,7 +53,6 @@ public class Main extends LinearOpMode {
             return Map.calculate(rightTrigger, 0d, 1d, 0.7, 1d);
         };
         robot.drivetrain.setDefaultCommand(new DriveRobotCentricCommand(robot.drivetrain, gp1::getLeftX, gp1::getLeftY, gp1::getRightX, coefSupplier));
-        gp1.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(new InstantCommand(robot.drivetrain::resetIMU, robot.drivetrain));
 
         // lift
 
@@ -77,13 +79,15 @@ public class Main extends LinearOpMode {
         gp2.getGamepadButton(GamepadKeys.Button.Y).whenPressed(new StartIntake(robot.intake, robot.deposit));
         gp2.getGamepadButton(GamepadKeys.Button.X).whenPressed(new StopIntake(robot.intake, robot.deposit));
         gp2.getGamepadButton(GamepadKeys.Button.A).whenPressed(new EjectIntake(robot.intake, robot.deposit));
-        gp2.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).whenPressed(new InstantCommand(robot.intake::reverseMotorMax, robot.intake));
+        gp2.getGamepadButton(GamepadKeys.Button.B).whenPressed(new StartIntakeForStack(robot.intake, robot.deposit, robot.arm));
 
         // arm
 
-        gp2.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).whenPressed(new InstantCommand(robot.arm::goIntake, robot.arm));
-        gp2.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).whenPressed(new InstantCommand(robot.arm::goMid, robot.arm));
-        gp2.getGamepadButton(GamepadKeys.Button.DPAD_UP).whenPressed(new InstantCommand(robot.arm::goHigh, robot.arm));
+        Trigger liftHeightCheckTrigger = new Trigger(() -> robot.lift.getPosition() > Arm.SAFE_HEIGHT);
+        gp2.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).and(liftHeightCheckTrigger).whenActive(new InstantCommand(robot.arm::goIntake, robot.arm));
+        gp2.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).and(liftHeightCheckTrigger).whenActive(new InstantCommand(robot.arm::goLow, robot.arm));
+        gp2.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).and(liftHeightCheckTrigger).whenActive(new InstantCommand(robot.arm::goMid, robot.arm));
+        gp2.getGamepadButton(GamepadKeys.Button.DPAD_UP).and(liftHeightCheckTrigger).whenActive(new InstantCommand(robot.arm::goHigh, robot.arm));
 
         // airplane
 

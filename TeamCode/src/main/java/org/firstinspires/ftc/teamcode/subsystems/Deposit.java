@@ -9,7 +9,7 @@ public class Deposit extends SubsystemBase {
 
     public Deposit(HardwareMap hardwareMap) {
         servo = hardwareMap.get(CRServo.class, "deposit");
-//        servo.setDirection(DcMotorSimple.Direction.REVERSE);
+
         this.stop();
     }
 

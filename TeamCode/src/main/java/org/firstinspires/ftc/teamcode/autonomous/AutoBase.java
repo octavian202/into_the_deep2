@@ -3,110 +3,109 @@ package org.firstinspires.ftc.teamcode.autonomous;
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.message.redux.StopOpMode;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Arclength;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Pose2dDual;
 import com.acmerobotics.roadrunner.PosePath;
 import com.acmerobotics.roadrunner.VelConstraint;
+import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.commands.AutoScorePixel;
+import org.firstinspires.ftc.teamcode.commands.Intake.StartIntake;
+import org.firstinspires.ftc.teamcode.commands.Intake.StartIntakeForStack;
+import org.firstinspires.ftc.teamcode.commands.Intake.StopIntake;
 import org.firstinspires.ftc.teamcode.commands.LowExtendCommand;
 import org.firstinspires.ftc.teamcode.commands.RetractCommand;
 import org.firstinspires.ftc.teamcode.subsystems.Robot;
-import org.firstinspires.ftc.teamcode.vision.pipelines.ThresholdPipeline;
-import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.firstinspires.ftc.teamcode.subsystems.SpikeDetectionCamera;
 
 import java.util.List;
 
 public class AutoBase extends LinearOpMode {
 
     protected Robot robot;
-    protected int spikePosition = 3;
-    protected Action driveAction;
+    protected SpikeDetectionCamera spikeDetectionCamera;
+    protected String color = "red";
+    protected LowExtendCommand lowExtendCommand, midExtendCommand;
     protected RetractCommand retractCommand;
-    protected LowExtendCommand lowExtendCommand;
-    protected String color = "blue";
-
+    protected AutoScorePixel autoScoreCommand;
     protected VelConstraint lowVelConstraint = new VelConstraint() {
         @Override
         public double maxRobotVel(@NonNull Pose2dDual<Arclength> pose2dDual, @NonNull PosePath posePath, double v) {
-            return 25;
+            return 30;
         }
     };
     protected VelConstraint midVelConstraint = new VelConstraint() {
         @Override
         public double maxRobotVel(@NonNull Pose2dDual<Arclength> pose2dDual, @NonNull PosePath posePath, double v) {
-            return 35;
+            return 40;
         }
     };
+
     protected VelConstraint highVelConstraint = new VelConstraint() {
         @Override
         public double maxRobotVel(@NonNull Pose2dDual<Arclength> pose2dDual, @NonNull PosePath posePath, double v) {
-            return 45;
+            return 50;
         }
     };
+
+    protected TelemetryPacket telemetryPacket = new TelemetryPacket();
+    protected Pose2d startPose = new Pose2d(0, 0, 0);
+    protected int spikePosition = 3;
+    protected Action driveAction;
+    protected StartIntake startIntakeCommand;
+    protected StopIntake stopIntakeCommand;
+    protected StartIntakeForStack startIntakeForStackCommand;
+
     @Override
     public void runOpMode() throws InterruptedException {
-        CommandScheduler.getInstance().reset();
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
         for (LynxModule hub : allHubs) {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
-        Robot robot = new Robot(hardwareMap, Robot.OpModeType.Auto);
+        CommandScheduler.getInstance().reset();
+
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+        robot = new Robot(hardwareMap, Robot.OpModeType.Auto);
+
+        setColor();
+        spikeDetectionCamera = new SpikeDetectionCamera(hardwareMap, color, telemetry);
 
         retractCommand = new RetractCommand(robot.lift, robot.arm);
-        lowExtendCommand = new LowExtendCommand(robot.lift, robot.arm, 1400);
+        lowExtendCommand = new LowExtendCommand(robot.lift, robot.arm, 1150);
+        midExtendCommand = new LowExtendCommand(robot.lift, robot.arm, 1400);
 
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        WebcamName webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
-        OpenCvCamera camera = OpenCvCameraFactory.getInstance().createWebcam(webcamName, cameraMonitorViewId);
+        autoScoreCommand = new AutoScorePixel(robot.lift, robot.arm, robot.deposit);
 
-        OpenCvCamera.AsyncCameraOpenListener cameraOpenListener = new OpenCvCamera.AsyncCameraOpenListener() {
-            @Override
-            public void onOpened() {
-                camera.startStreaming(1280, 720, OpenCvCameraRotation.UPRIGHT);
-            }
-
-            @Override
-            public void onError(int errorCode) {
-
-            }
-        };
-
-        camera.openCameraDeviceAsync(cameraOpenListener);
-        ThresholdPipeline pipeline = new ThresholdPipeline(telemetry, color);
-        camera.setPipeline(pipeline);
+        startIntakeCommand = new StartIntake(robot.intake, robot.deposit);
+        stopIntakeCommand = new StopIntake(robot.intake, robot.deposit);
+        startIntakeForStackCommand = new StartIntakeForStack(robot.intake, robot.deposit, robot.arm);
 
         while (!isStopRequested() && !isStarted()) {
-            spikePosition = pipeline.getPosition();
-            telemetry.addData("spike pos", spikePosition);
-            telemetry.update();
+            spikePosition = spikeDetectionCamera.getDetection();
         }
 
-        TelemetryPacket telemetryPacket = new TelemetryPacket();
+        waitForStart();
+        spikeDetectionCamera.close();
 
-        onStarted();
+        afterInit();
 
-        while (opModeIsActive() && !isStopRequested()) {
+        while (!isStopRequested()) {
             CommandScheduler.getInstance().run();
-
-            if (driveAction != null) {
-                driveAction.run(telemetryPacket);
-            }
+            driveAction.run(telemetryPacket);
         }
-
     }
 
-    public void onStarted() {}
-
+    protected void afterInit() {}
+    protected void setColor() {}
 }

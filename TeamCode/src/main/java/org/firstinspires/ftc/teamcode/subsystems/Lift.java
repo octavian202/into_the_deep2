@@ -17,8 +17,6 @@ public class Lift extends SubsystemBase {
     private DcMotorEx motor;
     public static final double POWER_MIN = -0.6, POWER_MAX = 1.0;
     public static int target = 0;
-    public static double MAX_AMPS = 6.0;
-
     PIDController pidController;
 
     
@@ -36,8 +34,12 @@ public class Lift extends SubsystemBase {
     }
 
     private int offset = 0;
+    private int position = 0;
+    private void read() {
+        position = motor.getCurrentPosition() + offset;
+    }
     public int getPosition() {
-        return motor.getCurrentPosition() + offset;
+        return position;
     }
     public void resetEncoder() {
         offset = -motor.getCurrentPosition();
@@ -45,7 +47,6 @@ public class Lift extends SubsystemBase {
 
 
     public void setPower(double power) {
-//        power = power + 0.05;
 
         power = Math.max(POWER_MIN, power);
         power = Math.min(POWER_MAX, power);
@@ -62,13 +63,11 @@ public class Lift extends SubsystemBase {
 
     @Override
     public void periodic() {
+        read();
         pidController.setPID(KP, KI, KD);
 
         setTarget(Math.max(0, getTarget()));
         setTarget(Math.min(1820, getTarget()));
-//        if (motor.getCurrent(CurrentUnit.AMPS) > MAX_AMPS) {
-//            setTarget(this.getPosition());
-//        }
 
         double output = pidController.calculate(this.getPosition(), target);
         this.setPower(output);

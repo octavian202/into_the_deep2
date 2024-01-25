@@ -15,9 +15,14 @@ import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.autonomous.AutoBase;
+import org.firstinspires.ftc.teamcode.autonomous.backdropSide.BackdropSidePositions;
 import org.firstinspires.ftc.teamcode.commands.Intake.OuttakeAutoCommand;
+import org.firstinspires.ftc.teamcode.commands.Intake.StartIntakeForStack;
+import org.firstinspires.ftc.teamcode.commands.Intake.StopIntake;
 import org.firstinspires.ftc.teamcode.commands.LowExtendCommand;
 import org.firstinspires.ftc.teamcode.commands.RetractCommand;
 import org.firstinspires.ftc.teamcode.movement.MecanumDrive;
@@ -25,6 +30,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Arm;
 import org.firstinspires.ftc.teamcode.subsystems.Deposit;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.Lift;
+import org.firstinspires.ftc.teamcode.subsystems.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.SpikeDetectionCamera;
 import org.firstinspires.ftc.teamcode.vision.pipelines.ThresholdPipeline;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
@@ -33,103 +40,51 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 import java.util.List;
 
 @Autonomous(name = "blue backdrop", group = ".")
-public class BlueBackdropAuto extends LinearOpMode {
+public class BlueBackdropAuto extends AutoBase {
 
     @Override
-    public void runOpMode() throws InterruptedException {
+    protected void setColor() {
+        color = "blue";
+    }
 
-        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
-        for (LynxModule hub : allHubs) {
-            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
-        }
-
-        CommandScheduler.getInstance().reset();
-
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
-
-        Pose2d startPose = new Pose2d(0, 0, 0);
-
-        MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, startPose);
-        Lift lift = new Lift(hardwareMap);
-        Arm arm = new Arm(hardwareMap, lift::getPosition);
-        Intake intake = new Intake(hardwareMap);
-        Deposit deposit = new Deposit(hardwareMap);
-
-        lift.resetEncoder();
-
-        RetractCommand retractCommand = new RetractCommand(lift, arm);
-
-
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        WebcamName webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
-        OpenCvCamera camera = OpenCvCameraFactory.getInstance().createWebcam(webcamName, cameraMonitorViewId);
-
-        OpenCvCamera.AsyncCameraOpenListener cameraOpenListener = new OpenCvCamera.AsyncCameraOpenListener() {
-            @Override
-            public void onOpened() {
-                camera.startStreaming(1280, 720, OpenCvCameraRotation.UPRIGHT);
-            }
-
-            @Override
-            public void onError(int errorCode) {
-
-            }
-        };
-
-        camera.openCameraDeviceAsync(cameraOpenListener);
-        ThresholdPipeline pipeline = new ThresholdPipeline(telemetry, "blue");
-        camera.setPipeline(pipeline);
-
-        int spikePosition = 3;
-
-        while (!isStopRequested() && !isStarted()) {
-            spikePosition = pipeline.getPosition();
-            telemetry.addData("spike pos", spikePosition);
-            telemetry.update();
-        }
-
-
-        waitForStart();
-
+    @Override
+    protected void afterInit() {
         Pose2d spikePos = BackdropSidePositions.blueSpikePos[spikePosition - 1];
         Pose2d backdropPos = BackdropSidePositions.blueBackdropPos[spikePosition - 1];
 
-
-        Action driveAction = mecanumDrive.actionBuilder(startPose)
+        driveAction = robot.mecanumDrive.actionBuilder(startPose)
                 // merge la spike
                 .splineToLinearHeading(spikePos, spikePos.heading)
                 .afterTime(0, () -> { // pune pixelul
-                    OuttakeAutoCommand outtakeAutoCommand = new OuttakeAutoCommand(intake);
+                    OuttakeAutoCommand outtakeAutoCommand = new OuttakeAutoCommand(robot.intake);
                     outtakeAutoCommand.schedule();
                 })
                 .waitSeconds(1.6) // iese pixelul
-                .afterTime(0.2, () -> { // ridica bratul
-                    (new LowExtendCommand(lift, arm, 1400)).schedule();
-                })
-                .setReversed(true) // merge la backdrop
-                .splineToLinearHeading(backdropPos, backdropPos.heading, new VelConstraint() {
-                    @Override
-                    public double maxRobotVel(@NonNull Pose2dDual<Arclength> pose2dDual, @NonNull PosePath posePath, double v) {
-                        return 30;
-                    }
-                })
-                .afterTime(0.4, deposit::deposit) // depoziteaza, sta putin coboara bratul
-                .waitSeconds(1.4)
-                .afterTime(0d, deposit::stop)
-                .afterTime(0d, () -> {
-                    retractCommand.schedule();
-                })
-                .waitSeconds(1)
-//                  .splineToLinearHeading(BackdropSidePositions.parkInsidePos, -Math.PI / 3) // parcare in interior
-                .splineToLinearHeading(BackdropSidePositions.blueParkOutsidePos, Math.PI / 3) // parcare in exterior
-                .lineToY(BackdropSidePositions.blueParkOutsidePos.position.y + 10)
+                .afterTime(0.2, () -> {lowExtendCommand.schedule();})
+                .setReversed(true)
+                .splineToLinearHeading(backdropPos, backdropPos.heading, lowVelConstraint)
+//                .afterTime(0.6, robot.deposit::deposit)
+//                .waitSeconds(1.6)
+//                .afterTime(0d, robot.deposit::stop)
+//                .afterTime(0d, () -> {retractCommand.schedule();}) // se termina pixelul galben
+                .afterTime(0.6, () -> autoScoreCommand.schedule())
+                .waitSeconds(1.6)
+                .setReversed(false)
+                .splineToLinearHeading(BackdropSidePositions.blueIntermediarPos, -Math.PI / 2, lowVelConstraint)
+                .afterTime(1d, () -> {startIntakeForStackCommand.schedule();})
+                .lineToY(BackdropSidePositions.blueStackPos.position.y + 10, midVelConstraint)
+                .lineToY(BackdropSidePositions.blueStackPos.position.y, lowVelConstraint)
+                .turn(Math.toRadians(-10))
+                .waitSeconds(3)
+                .setReversed(true)
+                .afterTime(1d, () -> {stopIntakeCommand.schedule();})
+                .lineToY(BackdropSidePositions.blueIntermediarPos.position.y - 10, midVelConstraint)
+                .afterTime(0, () -> midExtendCommand.schedule())
+                .afterTime(1d, robot.arm::goLow)
+                .lineToY(BackdropSidePositions.blueIntermediarPos.position.y)
+                .splineToLinearHeading(BackdropSidePositions.blueBackdropPos[2], Math.PI / 2, lowVelConstraint)
+                .afterTime(2d, () -> autoScoreCommand.schedule())
+                .waitSeconds(3d)
                 .build();
-
-        while (opModeIsActive() && !isStopRequested()) {
-            CommandScheduler.getInstance().run();
-
-            driveAction.run(new TelemetryPacket());
-        }
-
     }
 }

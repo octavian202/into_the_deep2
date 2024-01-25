@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 public class ManualControlCommand extends CommandBase {
     Lift lift;
     Supplier<Double> directionSupplier;
-    public static double step = 70;
+    public static double step = 60;
 
     public ManualControlCommand(Lift lift, Supplier<Double> sup) {
         this.lift = lift;

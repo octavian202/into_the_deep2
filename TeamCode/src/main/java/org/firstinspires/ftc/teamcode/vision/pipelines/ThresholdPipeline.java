@@ -18,7 +18,7 @@ public class ThresholdPipeline extends OpenCvPipeline {
     TeamPropPosition teamPropPosition = TeamPropPosition.LEFT;
     Color color;
     public static int RED_RECOGNITION_TRESHOLD = 20;
-    public static int BLUE_RECOGNITION_TRESHOLD = 10;
+    public static int BLUE_RECOGNITION_TRESHOLD = 20;
     private int threshold = 50;
 
     /*
@@ -65,8 +65,8 @@ public class ThresholdPipeline extends OpenCvPipeline {
 
     // region 2 (70, 70), (220, 210)
     // region 3 (350, 80), (550, 270)
-    Point zone1UpLeft = new Point(210, 300), zone1DownRight = new Point(480, 560);
-    Point zone2UpLeft = new Point(800, 250), zone2DownRight = new Point(990, 480);
+    Point zone1UpLeft = new Point(240, 380), zone1DownRight = new Point(480, 600);
+    Point zone2UpLeft = new Point(800, 350), zone2DownRight = new Point(1000, 520);
 
     public ThresholdPipeline(Telemetry telemetry, String color) {
         

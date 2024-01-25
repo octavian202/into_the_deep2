@@ -11,14 +11,15 @@ import java.util.function.Supplier;
 public class Arm extends SubsystemBase {
 
     public enum ArmState {
-        Intake, Idle, Low, Mid, High
+        Intake, Idle, Low, Mid, High, Stack
     }
 
     private ArmState armState;
-    public static double IDLE = 0.02;
-    public static double INTAKE = 0.05, DEPOSIT_LOW = 0.45, DEPOSIT_MID = 0.5, DEPOSIT_HIGH = 0.69;
-    public static double WRIST_INTAKE = 0.44, WRIST_DEPOSIT_MID = 0.48, WRIST_DEPOSIT_LOW = 0.3, WRIST_DEPOSIT_HIGH = 0.66;
-    public static int CHANGE_HEIGHT = 150;
+    public static double IDLE = 0.025;
+    public static double INTAKE = 0.06, DEPOSIT_LOW = 0.32, DEPOSIT_MID = 0.52, DEPOSIT_HIGH = 0.71;
+    public static double WRIST_INTAKE = 0.42, WRIST_DEPOSIT_MID = 0.48, WRIST_DEPOSIT_LOW = 0.3, WRIST_DEPOSIT_HIGH = 0.72;
+    public static double WRIST_INTAKE_STACK = 0.395;
+    public static int CHANGE_HEIGHT = 150, SAFE_HEIGHT = 900;
 
     ServoImplEx left, right;
     Supplier<Integer> liftPositionSupplier;
@@ -47,6 +48,7 @@ public class Arm extends SubsystemBase {
     public void goIntake() {
         armState = ArmState.Intake;
     }
+    public void goStack() {armState = ArmState.Stack;}
 
     public void goLow() {
         armState = ArmState.Low;
@@ -65,22 +67,32 @@ public class Arm extends SubsystemBase {
 
         int liftPosition = liftPositionSupplier.get();
 
-        if (armState == ArmState.Intake && liftPosition > CHANGE_HEIGHT) {
-            armState = ArmState.Idle;
-        }
-        if (armState == ArmState.Idle && liftPosition <= CHANGE_HEIGHT) {
-            armState = ArmState.Intake;
-        }
-
         switch (armState) {
             case Intake:
                 this.setPosition(INTAKE);
                 wrist.setPosition(WRIST_INTAKE);
+
+                if (liftPosition > CHANGE_HEIGHT) {
+                    armState = ArmState.Idle;
+                }
+
+                break;
+            case Stack:
+                this.setPosition(INTAKE);
+                wrist.setPosition(WRIST_INTAKE_STACK);
+
+                if (liftPosition > CHANGE_HEIGHT) {
+                    armState = ArmState.Idle;
+                }
                 break;
 
             case Idle:
                 this.setPosition(IDLE);
                 wrist.setPosition(WRIST_INTAKE);
+
+                if (liftPosition <= CHANGE_HEIGHT) {
+                    armState = ArmState.Intake;
+                }
                 break;
 
             case Low:
@@ -98,6 +110,9 @@ public class Arm extends SubsystemBase {
                 wrist.setPosition(WRIST_DEPOSIT_HIGH);
                 break;
 
+
+            default:
+                break;
         }
     }
 

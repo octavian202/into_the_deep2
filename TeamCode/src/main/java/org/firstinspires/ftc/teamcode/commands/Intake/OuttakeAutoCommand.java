@@ -12,7 +12,7 @@ public class OuttakeAutoCommand extends SequentialCommandGroup {
 
     public OuttakeAutoCommand(Intake intake) {
         addCommands(
-                new InstantCommand(intake::goDown, intake),
+                new InstantCommand(intake::rampDown, intake),
                 new WaitCommand(WAIT_TO_GO_DOWN),
                 new InstantCommand(intake::reverseMotorAuto),
                 new WaitCommand(OUTTAKE_MS),

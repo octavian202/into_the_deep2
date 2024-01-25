@@ -21,9 +21,9 @@ public class Intake extends SubsystemBase {
     }
 
 
-    public static double UP = 0d, DOWN = 0.37;
+    public static double IDLE = 0.06, INTAKE = 0.43, INTAKE_STACK = 0.335;
     public static double INTAKE_POWER = 0.8, EJECT_POWER = -0.6;
-    public static double AMPS_THRESHOLD = 100d;
+    public static double MAX_CURRENT = 100d;
     public static double CHECK_INTERVAL = 0.6;
 
     DcMotorEx motor;
@@ -55,27 +55,35 @@ public class Intake extends SubsystemBase {
     }
     public void reverseMotorMax() {motor.setPower(-1d);}
 
-    public void goUp() {
-        servo.setPosition(UP);
+    public void rampUp() {
+        servo.setPosition(IDLE);
     }
-    public void goDown() {
-        servo.setPosition(DOWN);
+    public void rampDown() {
+        servo.setPosition(INTAKE);
+    }
+    public void rampStack() {
+        servo.setPosition(INTAKE_STACK);
     }
 
     public void startIntake() {
         this.intakeState = IntakeState.Intaking;
         this.startMotor();
-        this.goDown();
+        this.rampDown();
+    }
+    public void startIntakeForStack() {
+        this.intakeState = IntakeState.Intaking;
+        this.startMotor();
+        this.rampStack();
     }
     public void stopIntake() {
         this.intakeState = IntakeState.Idle;
         this.stopMotor();
-        this.goUp();
+        this.rampUp();
     }
 
     public void reverseIntake() {
         this.intakeState = IntakeState.Reverse;
-        this.goDown();
+        this.rampDown();
         this.reverseMotor();
     }
 
@@ -94,7 +102,7 @@ public class Intake extends SubsystemBase {
                 return;
             }
 
-            if (getCurrent() > AMPS_THRESHOLD) {
+            if (getCurrent() > MAX_CURRENT) {
                 this.reverseMotor();
             } else {
                 this.startMotor();
