@@ -10,7 +10,17 @@
 
 
 // Custom definitions may go here
-
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url = 'https://www.matthewo.tech/maven/'
+        }
+    }
+    dependencies {
+        classpath 'org.team11260:fast-load-plugin:0.1.1'
+    }
+}
 // Include common definitions from above.
 buildscript {
     repositories {
@@ -44,7 +54,13 @@ repositories {
 
 dependencies {
     implementation project(':FtcRobotController')
+    annotationProcessor files('lib/OpModeAnnotationProcessor.jar')
 
-    implementation 'org.ftclib.ftclib:core:2.1.1' // core
-    implementation 'org.team11260:fast-load:0.1.2'
+    implementation "com.acmerobotics.roadrunner:ftc:0.1.9"
+    implementation "com.acmerobotics.dashboard:dashboard:0.4.14"
+    implementation 'org.team11260:fast-load:0.1.1'
+    implementation 'org.openftc:easyopencv:1.7.0'
+    implementation 'org.ftclib.ftclib:core:2.1.1'
+
+
 }
